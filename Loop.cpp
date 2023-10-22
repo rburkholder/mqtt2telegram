@@ -94,7 +94,8 @@ Loop::Loop( const config::Values& choices, asio::io_context& io_context )
         std::string sTopic( svTopic );
         std::string sMessage( svMessage );
 
-        static const boost::regex expr {"\"ups.status\":\"([^\"]+)\""};
+        //static const boost::regex expr {"\"ups.status\":\"([^ \"]+) .([^\"].)\""};
+        static const boost::regex expr {"\"ups.status\":\"([^ \"]+)|(([^ \"]+)( [^\"]+))\""};
         boost::smatch what;
         if ( boost::regex_search( sMessage, what, expr ) ) {
           umapStatus_t::iterator iterStatus = m_umapStatus.find( sTopic );
