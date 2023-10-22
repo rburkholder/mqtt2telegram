@@ -1,8 +1,9 @@
 /*
-  project: nut2mqtt
   file:    mqtt.hpp
+  Project: Mqtt2Telegram
   author:  raymond@burkholder.net
   date:    2023/10/01 15:58:25
+  copied from, and need to backport to nut2mqtt
 */
 
 #include <mutex>
@@ -11,8 +12,6 @@
 #include <stdexcept>
 #include <functional>
 #include <unordered_map>
-
-//#include "Config.hpp"
 
 #include <MQTTClient.h>
 

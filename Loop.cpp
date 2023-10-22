@@ -15,8 +15,8 @@
 /*
  * File:    Loop.cpp
  * Author:  raymond@burkholder.net
- * Project: Nut2MQTT
- * Created: October 8, 07:56:05
+ * Project: Mqtt2Telegram
+ * Created: October 23, 2023 13:43:38
  */
 
 #include <unistd.h>
@@ -30,6 +30,8 @@
 #include <boost/asio/post.hpp>
 
 #include <nutclient.h>
+
+#include <Telegram/Bot.hpp>
 
 #include "Loop.hpp"
 #include "Config.hpp"
@@ -76,13 +78,20 @@ Loop::Loop( const config::Values& choices, asio::io_context& io_context )
   }
 
   try {
-    //m_pNutClient = std::make_unique<nut::TcpClient>( choices.nut.sHost, 3493 );
-    //m_setDeviceNames = m_pNutClient->getDeviceNames();
+    if ( m_choices.telegram.sToken.empty() ) {
+      BOOST_LOG_TRIVIAL(warning) << "telegram: no token available" << std::endl;
+    }
+    else {
+      m_telegram_bot = std::make_unique<telegram::Bot>( m_choices.telegram.sToken );
+    }
   }
-  catch( const std::logic_error& e ) {
-    BOOST_LOG_TRIVIAL(error) << "client open problems: " << e.what();
-    throw e;
+  catch (...) {
+    BOOST_LOG_TRIVIAL(error) << "telegram open failure";
   }
+
+  //auto id = m_telegram_bot->GetChatId();
+  m_telegram_bot->SetChatId( 5467345437 );
+  Telegram_SendMessage();
 
   std::cout << "ctrl-c to end" << std::endl;
 
@@ -143,6 +152,24 @@ void Loop::Signals( const boost::system::error_code& error_code, int signal_numb
   }
 }
 
+void Loop::Telegram_GetMe() {
+  if ( m_telegram_bot ) {
+    m_telegram_bot->GetMe();
+  }
+  else {
+    std::cout << "telegram bot is not available" << std::endl;
+  }
+}
+
+void Loop::Telegram_SendMessage() {
+  if ( m_telegram_bot ) {
+    m_telegram_bot->SendMessage( "Menu Test" );
+  }
+  else {
+    std::cout << "telegram bot is not available" << std::endl;
+  }
+}
+
 void Loop::Poll( bool bAll, bool bEnumerate ) {
 
       //const std::string sTopic = m_choices.mqtt.sTopic + '/' + sDeviceName;
@@ -182,5 +209,6 @@ void Loop::Poll( bool bAll, bool bEnumerate ) {
 
 Loop::~Loop() {
   m_pWorkGuard.reset();
+  m_telegram_bot.reset();
   m_pMqtt.reset();
 }

@@ -19,7 +19,7 @@ set(BOOST_INCLUDEDIR "/usr/local/include/boost")
 #set(BOOST_LIBRARYDIR "/usr/local/lib")
 
 #find_package(Boost 1.81.0 REQUIRED COMPONENTS program_options thread filesystem log)
-find_package(Boost 1.81.0 COMPONENTS program_options regex thread filesystem log log_setup REQUIRED )
+find_package(Boost 1.81.0 COMPONENTS program_options regex thread filesystem log log_setup json REQUIRED )
 #telegram:
 find_package(Td 1.8.11 REQUIRED)
 
@@ -59,6 +59,8 @@ target_link_libraries(
     libpaho-mqtt3c.a
     Telegram
     ${Boost_LIBRARIES}
+    crypto
+    ssl
   )
 
 add_subdirectory(Telegram)

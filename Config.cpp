@@ -38,13 +38,14 @@ namespace {
   static const std::string sValue_Mqtt_Topic( "mqtt_topic" );
 
   static const std::string sValue_Telegram_Token( "telegram_token" );
+  static const std::string sValue_Telegram_ChatId( "telegram_chat_id" );
 
   template<typename T>
   bool parse( const std::string& sFileName, po::variables_map& vm, const std::string& name, T& dest ) {
     bool bOk = true;
     if ( 0 < vm.count( name ) ) {
       dest = vm[name].as<T>();
-      //BOOST_LOG_TRIVIAL(info) << name << " = " << dest;
+      BOOST_LOG_TRIVIAL(info) << name << " = " << dest;
     }
     else {
       BOOST_LOG_TRIVIAL(error) << sFileName << " missing '" << name << "='";
@@ -57,11 +58,6 @@ namespace {
 namespace config {
 
 bool Load( const std::string& sFileName, Values& values ) {
-
-  using vName_t = std::vector<std::string>;
-
-  vName_t vField;
-  vName_t vNumeric;
 
   bool bOk( true );
 
@@ -81,7 +77,8 @@ bool Load( const std::string& sFileName, Values& values ) {
       ( sValue_Mqtt_Password.c_str(), po::value<std::string>( &values.mqtt.sPassword ), "mqtt password" )
       ( sValue_Mqtt_Topic.c_str(), po::value<std::string>( &values.mqtt.sTopic )->default_value( "nut/" ), "mqtt topic" )
 
-      ( sValue_Telegram_Token.c_str(), po::value<vName_t>( &vField ), "telegram token" )
+      ( sValue_Telegram_Token.c_str(), po::value<std::string>( &values.telegram.sToken ), "telegram token" )
+      ( sValue_Telegram_ChatId.c_str(), po::value<uint64_t>( &values.telegram.idChat ), "telegram chat id" )
       ;
     po::variables_map vm;
     //po::store( po::parse_command_line( argc, argv, config ), vm );
@@ -102,6 +99,7 @@ bool Load( const std::string& sFileName, Values& values ) {
       bOk &= parse<std::string>( sFileName, vm, sValue_Mqtt_Topic, values.mqtt.sTopic );
 
       bOk &= parse<std::string>( sFileName, vm, sValue_Telegram_Token, values.telegram.sToken );
+      bOk &= parse<uint64_t>( sFileName, vm, sValue_Telegram_ChatId, values.telegram.idChat );
     }
 
   }

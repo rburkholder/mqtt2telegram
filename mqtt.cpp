@@ -1,8 +1,9 @@
 /*
-  project: nut2mqtt
   file:    mqtt.cpp
+  Project: Mqtt2Telegram
   author:  raymond@burkholder.net
   date:    2023/10/01 15:58:25
+  copied from, and need to backport to nut2mqtt
 */
 
 #include <chrono>
@@ -10,6 +11,7 @@
 #include <iostream>
 
 #include "mqtt.hpp"
+#include "Config.hpp"
 
 namespace {
   unsigned int c_nQOS( 1 );
@@ -20,13 +22,13 @@ Mqtt::Mqtt( const config::Values& choices, const char* szHostName )
 : m_state( EState::init )
 , m_conn_opts( MQTTClient_connectOptions_initializer )
 , m_pubmsg( MQTTClient_message_initializer )
-//, m_sMqttUrl( "tcp://" + choices.mqtt.sHost + ":1883" )
+, m_sMqttUrl( "tcp://" + choices.mqtt.sHost + ":1883" )
 {
   m_conn_opts.keepAliveInterval = 20;
   m_conn_opts.cleansession = 1;
   m_conn_opts.connectTimeout = c_nTimeOut;
-  //m_conn_opts.username = choices.mqtt.sUserName.c_str();
-  //m_conn_opts.password = choices.mqtt.sPassword.c_str();
+  m_conn_opts.username = choices.mqtt.sUserName.c_str();
+  m_conn_opts.password = choices.mqtt.sPassword.c_str();
 
   int rc;
 

@@ -35,6 +35,7 @@ struct Mqtt {
 
 struct Telegram {
   std::string sToken;
+   uint64_t idChat;
 };
 
 struct Values {

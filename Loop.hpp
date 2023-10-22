@@ -15,8 +15,8 @@
 /*
  * File:    Loop.hpp
  * Author:  raymond@burkholder.net
- * Project: Nut2MQTT
- * Created: October 8, 07:56:05
+ * Project: Mqtt2Telegram
+ * Created: October 23, 2023 13:43:38
  */
 
 #include <set>
@@ -32,11 +32,11 @@ namespace config {
   class Values;
 }
 
-namespace nut {
-  class TcpClient;
-}
-
 class Mqtt;
+
+namespace telegram {
+  class Bot;
+}
 
 namespace asio = boost::asio; // from <boost/asio/context.hpp>
 
@@ -57,7 +57,7 @@ private:
   std::string m_sMqttId;
 
   std::unique_ptr<Mqtt> m_pMqtt;
-  //std::unique_ptr<nut::TcpClient> m_pNutClient;
+  std::unique_ptr<telegram::Bot> m_telegram_bot;
 
   using work_guard_t = asio::executor_work_guard<asio::io_context::executor_type>;
   using pWorkGuard_t = std::unique_ptr<work_guard_t>;
@@ -74,5 +74,8 @@ private:
 
   void Poll( bool bAll, bool bEnumerate );
   void Signals( const boost::system::error_code&, int );
+
+  void Telegram_GetMe();
+  void Telegram_SendMessage();
 
 };

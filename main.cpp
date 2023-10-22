@@ -1,5 +1,5 @@
 /*
-  project: mqtt2telegram
+  project: Mqtt2Telegram
   author:  raymond@burkholder.net
   date:    2023/10/22 12:32:29
 */

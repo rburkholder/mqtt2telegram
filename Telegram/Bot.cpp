@@ -319,7 +319,7 @@ void Bot::SendMessage( const std::string& sMessage) {
       UpdateRequest[ "parse_mode" ] = "HTML";
       UpdateRequest[ "text" ] = sMessage;
       std::string sRequest = json::serialize( UpdateRequest );
-      //std::cout << "request='" << sRequest << "'" << std::endl;
+      std::cout << "request='" << sRequest << "'" << std::endl;
 
       auto request = std::make_shared<bot::session::one_shot>( asio::make_strand( m_io ), m_ssl_context );
       request->post(
@@ -329,7 +329,7 @@ void Bot::SendMessage( const std::string& sMessage) {
       , "sendMessage"
       , sRequest
       , [this]( bool bStatus, const std::string& message ){
-          //std::cout << "telegram response: " << message << std::endl;
+          std::cout << "telegram response: " << message << std::endl;
         }
       );
     }
