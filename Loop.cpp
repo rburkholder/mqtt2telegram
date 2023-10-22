@@ -78,6 +78,17 @@ Loop::Loop( const config::Values& choices, asio::io_context& io_context )
       m_telegram_bot->SetChatId( choices.telegram.idChat );
       //Telegram_SendMessage();
 
+      m_telegram_bot->SetCommand(
+        [this]( const std::string& sCmd ){
+          if ( sCmd == "/status" ) {
+            std::string sCurrent( "current" );
+            for ( const umapStatus_t::value_type& v: m_umapStatus ) {
+              sCurrent += ' ' + v.first + ":" + v.second;
+            }
+            m_telegram_bot->SendMessage( sCurrent );
+          }
+        } );
+
     }
   }
   catch (...) {

@@ -172,6 +172,7 @@ Bot::Bot( const std::string& sToken )
 : m_sToken( sToken )
 , m_idChat {}
 , m_ssl_context( ssl::context::tlsv12_client )
+, m_fCommand( nullptr )
 {
   // This holds the root certificate used for verification
   // NOTE: this needs to be fixed, based upon comments in the include header
@@ -192,6 +193,10 @@ Bot::~Bot() {
   if ( m_thread.joinable() ) {
     m_thread.join();
   }
+}
+
+void Bot::SetCommand( fCommand_t&& f ) {
+  m_fCommand = std::move( f );
 }
 
 void Bot::GetMe() {
@@ -262,16 +267,20 @@ void Bot::PollUpdate( uint64_t offset ) {
 
                     // extract any message entities
                     for ( const MessageEntity& me: vt.message.vMessageEntity ) {
+                      const std::string s( vt.message.svText.substr( me.offset, me.length ) );
                       if ( "bot_command" == me.svType ) {
                         std::cout
-                          << "  bot_command=" << vt.message.svText.substr( me.offset, me.length )
+                          << "  bot_command=" << s
                           << std::endl;
+                        if ( m_fCommand ) {
+                          m_fCommand( s );
+                        }
                       }
                       else {
                         std::cout
                           << "  other entity="
                           << me.svType
-                          << "(" << vt.message.svText.substr( me.offset, me.length )
+                          << "(" << s
                           << ")"
                           //<< ",offset=" << me.offset
                           //<< ",length=" << me.length
@@ -342,20 +351,8 @@ void Bot::SetMyCommands() {
     json::object BotCommand;
     json::array BotCommandList;
 
-    BotCommand[ "command" ] = "quote";
-    BotCommand[ "description" ] = "obtain quote of underlying";
-    BotCommandList.emplace_back( BotCommand );
-
-    BotCommand[ "command" ] = "buy";
-    BotCommand[ "description" ] = "market buy of underlying";
-    BotCommandList.emplace_back( BotCommand );
-
-    BotCommand[ "command" ] = "sell";
-    BotCommand[ "description" ] = "market sell of underlying";
-    BotCommandList.emplace_back( BotCommand );
-
-    BotCommand[ "command" ] = "position";
-    BotCommand[ "description" ] = "statistics of current position";
+    BotCommand[ "command" ] = "status";
+    BotCommand[ "description" ] = "message latest responses";
     BotCommandList.emplace_back( BotCommand );
 
     json::object BotCommandScope;
