@@ -43,11 +43,9 @@ namespace asio = boost::asio; // from <boost/asio/context.hpp>
 class Loop {
 public:
 
-  struct Choices {
-  };
-
   Loop( const config::Values&, asio::io_context& );
   ~Loop();
+
 protected:
 private:
 
@@ -59,20 +57,16 @@ private:
   std::unique_ptr<Mqtt> m_pMqtt;
   std::unique_ptr<telegram::Bot> m_telegram_bot;
 
+  using umapStatus_t = std::unordered_map<std::string,std::string>;
+  umapStatus_t m_umapStatus;
+
   using work_guard_t = asio::executor_work_guard<asio::io_context::executor_type>;
   using pWorkGuard_t = std::unique_ptr<work_guard_t>;
 
   pWorkGuard_t m_pWorkGuard;
 
-  //using setName_t = std::set<std::string>;
-  //using vValue_t = std::vector<std::string>;
-
-  //setName_t m_setDeviceNames;
-
   asio::signal_set m_signals;
-  asio::steady_timer m_timerPollInterval;
 
-  void Poll( bool bAll, bool bEnumerate );
   void Signals( const boost::system::error_code&, int );
 
   void Telegram_GetMe();

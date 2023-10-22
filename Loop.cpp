@@ -26,6 +26,7 @@
 
 #include <boost/log/trivial.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/regex.hpp>
 
 #include <boost/asio/post.hpp>
 
@@ -40,7 +41,6 @@
 Loop::Loop( const config::Values& choices, asio::io_context& io_context )
 : m_choices( choices ), m_io_context( io_context )
 , m_signals( io_context, SIGINT ) // SIGINT is called '^C'
-, m_timerPollInterval( io_context )
 {
 
   int rc;
@@ -53,8 +53,6 @@ Loop::Loop( const config::Values& choices, asio::io_context& io_context )
     assert( 0 < choices.mqtt.sId.size() );
     m_sMqttId = choices.mqtt.sId;
   }
-
-  m_pWorkGuard = std::make_unique<work_guard_t>( asio::make_work_guard( io_context ) );
 
   // https://www.boost.org/doc/libs/1_79_0/doc/html/boost_asio/reference/signal_set.html
 
@@ -70,32 +68,63 @@ Loop::Loop( const config::Values& choices, asio::io_context& io_context )
   } );
 
   try {
-    m_pMqtt = std::make_unique<Mqtt>( choices, szHostName );
-  }
-  catch ( const Mqtt::runtime_error& e ) {
-    BOOST_LOG_TRIVIAL(error) << "mqtt error: " << e.what() << '(' << e.rc << ')';
-    throw e;
-  }
-
-  try {
     if ( m_choices.telegram.sToken.empty() ) {
       BOOST_LOG_TRIVIAL(warning) << "telegram: no token available" << std::endl;
     }
     else {
       m_telegram_bot = std::make_unique<telegram::Bot>( m_choices.telegram.sToken );
+
+      //auto id = m_telegram_bot->GetChatId();
+      m_telegram_bot->SetChatId( choices.telegram.idChat );
+      //Telegram_SendMessage();
+
     }
   }
   catch (...) {
     BOOST_LOG_TRIVIAL(error) << "telegram open failure";
   }
 
-  //auto id = m_telegram_bot->GetChatId();
-  m_telegram_bot->SetChatId( 5467345437 );
-  Telegram_SendMessage();
+  try {
+    m_pMqtt = std::make_unique<Mqtt>( choices, choices.mqtt.sId.c_str() );
+
+    m_pMqtt->Subscribe(
+      choices.mqtt.sTopic + "/#",
+      [this]( const std::string_view& svTopic, const std::string_view& svMessage ){
+        // nut/furnace-sm1500 {"battery.charge":100,"battery.runtime":6749,"battery.voltage":26.4,"ups.status":"OL"}
+        std::string sTopic( svTopic );
+        std::string sMessage( svMessage );
+
+        static const boost::regex expr {"\"ups.status\":\"([^\"]+)\""};
+        boost::smatch what;
+        if ( boost::regex_search( sMessage, what, expr ) ) {
+          umapStatus_t::iterator iterStatus = m_umapStatus.find( sTopic );
+          //std::cout << "what0" << what[0] << '\n';
+          //std::cout << "what1" << what[1] << '\n';
+          if ( m_umapStatus.end() == iterStatus ) {
+            m_umapStatus.emplace( sTopic, what[ 1 ] );
+            m_telegram_bot->SendMessage( sTopic + ": " + what[ 1 ]  );
+          }
+          else {
+            if ( what[ 1 ] == iterStatus->second ) {
+              // nothing to do
+            }
+            else {
+              iterStatus->second = what[ 1 ];
+              m_telegram_bot->SendMessage( sTopic + ": " + what[ 1 ]  );
+            }
+          }
+        }
+      } );
+  }
+  catch ( const Mqtt::runtime_error& e ) {
+    BOOST_LOG_TRIVIAL(error) << "mqtt error: " << e.what() << '(' << e.rc << ')';
+    throw e;
+  }
+
+  m_pWorkGuard = std::make_unique<work_guard_t>( asio::make_work_guard( io_context ) );
+  //asio::post( m_io_context, std::bind( &Loop::Poll, this, true, choices.nut.bEnumerate ) );
 
   std::cout << "ctrl-c to end" << std::endl;
-
-  //asio::post( m_io_context, std::bind( &Loop::Poll, this, true, choices.nut.bEnumerate ) );
 
 }
 
@@ -147,7 +176,6 @@ void Loop::Signals( const boost::system::error_code& error_code, int signal_numb
   }
   else {
     m_pWorkGuard.reset();
-    m_timerPollInterval.cancel(); // comes after the reset
     bContinue = false;
   }
 }
@@ -163,52 +191,16 @@ void Loop::Telegram_GetMe() {
 
 void Loop::Telegram_SendMessage() {
   if ( m_telegram_bot ) {
-    m_telegram_bot->SendMessage( "Menu Test" );
+    m_telegram_bot->SendMessage( "mqtt2telegram test" );
   }
   else {
     std::cout << "telegram bot is not available" << std::endl;
   }
 }
 
-void Loop::Poll( bool bAll, bool bEnumerate ) {
-
-      //const std::string sTopic = m_choices.mqtt.sTopic + '/' + sDeviceName;
-
-      std::string sTopic;
-      std::string sMessage;
-
-      sMessage = '{' + sMessage + '}';
-
-      //std::cout << "topic: " << sTopic << std::endl;
-      //std::cout << sMessage << std::endl;
-
-      m_pMqtt->Publish(
-        sTopic, sMessage,
-        [](bool bStatus, int code ){
-          if ( bStatus ); // ok
-          else {
-            BOOST_LOG_TRIVIAL(error) << "mqtt publish error: " << code;
-          }
-        } );
-
-
-  if ( nullptr != m_pWorkGuard.get() ) {
-    //m_timerPollInterval.expires_after( std::chrono::seconds( m_choices.nut.nPollInterval ) );
-    m_timerPollInterval.async_wait( [this]( const boost::system::error_code& e ){
-      if ( 0 == e.value() ) {
-        Poll( false, false );
-      }
-      else {
-        // Operation canceled [system:125]
-        //BOOST_LOG_TRIVIAL(warning) << "timer msg: " << e.what(); // boost 1.81
-        BOOST_LOG_TRIVIAL(warning) << "timer msg: " << e.message(); // boost 1.74
-      }
-    } );
-  }
-}
-
 Loop::~Loop() {
   m_pWorkGuard.reset();
   m_telegram_bot.reset();
+  m_pMqtt->UnSubscribe( m_choices.mqtt.sTopic + "/#" );
   m_pMqtt.reset();
 }

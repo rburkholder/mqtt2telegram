@@ -11,6 +11,7 @@
 #include <thread>
 #include <stdexcept>
 #include <functional>
+#include <string_view>
 #include <unordered_map>
 
 #include <MQTTClient.h>
@@ -36,6 +37,11 @@ public:
   using fPublishComplete_t = std::function<void(bool,int)>;
   void Publish( const std::string& sTopic, const std::string& sMessage, fPublishComplete_t&& );
 
+  // send and forget, errors are simply logged
+  using fMessage_t = std::function<void( const std::string_view& svTopic, const std::string_view& svMessage )>;
+  void Subscribe( const std::string_view& svTopic, fMessage_t&& );
+  void UnSubscribe( const std::string_view& svTopic );
+
 protected:
 private:
 
@@ -52,6 +58,8 @@ private:
 
   using umapDeliveryToken_t = std::unordered_map<MQTTClient_deliveryToken, fPublishComplete_t>;
   umapDeliveryToken_t m_umapDeliveryToken;
+
+  fMessage_t m_fMessage;
 
   static int MessageArrived( void* context, char* topicName, int topicLen, MQTTClient_message* message );
   static void DeliveryComplete( void* context, MQTTClient_deliveryToken token );

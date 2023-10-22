@@ -13,6 +13,8 @@
 #include "mqtt.hpp"
 #include "Config.hpp"
 
+// documentation: https://eclipse.github.io/paho.mqtt.c/MQTTClient/html/_m_q_t_t_client_8h.html
+
 namespace {
   unsigned int c_nQOS( 1 );
   unsigned int c_nTimeOut( 2 ); // seconds
@@ -23,6 +25,7 @@ Mqtt::Mqtt( const config::Values& choices, const char* szHostName )
 , m_conn_opts( MQTTClient_connectOptions_initializer )
 , m_pubmsg( MQTTClient_message_initializer )
 , m_sMqttUrl( "tcp://" + choices.mqtt.sHost + ":1883" )
+, m_fMessage( nullptr )
 {
   m_conn_opts.keepAliveInterval = 20;
   m_conn_opts.cleansession = 1;
@@ -145,6 +148,22 @@ void Mqtt::Publish( const std::string& sTopic, const std::string& sMessage, fPub
   }
 }
 
+void Mqtt::Subscribe( const std::string_view& topic, fMessage_t&& fMessage ) {
+  m_fMessage = std::move( fMessage );
+  assert( m_clientMqtt );
+  // TODO: memory leaks on topic?
+  int result = MQTTClient_subscribe( m_clientMqtt, topic.begin(), 1 );
+  assert( MQTTCLIENT_SUCCESS == result );
+}
+
+void Mqtt::UnSubscribe( const std::string_view& topic ) {
+  assert( m_clientMqtt );
+  // TODO: memory leaks on topic?
+  int result = MQTTClient_unsubscribe( m_clientMqtt, topic.begin() );
+  assert( MQTTCLIENT_SUCCESS == result );
+  m_fMessage = nullptr;
+}
+
 void Mqtt::ConnectionLost( void* context, char* cause ) {
   assert( context );
   Mqtt* self = reinterpret_cast<Mqtt*>( context );
@@ -158,10 +177,11 @@ void Mqtt::ConnectionLost( void* context, char* cause ) {
 int Mqtt::MessageArrived( void* context, char* topicName, int topicLen, MQTTClient_message* message ) {
   assert( context );
   Mqtt* self = reinterpret_cast<Mqtt*>( context );
-  assert( 0 == topicLen  );
-  std::cout << "mqtt message: " << std::string( topicName, topicLen ) << " " << std::string( (const char*) message->payload, message->payloadlen ) << std::endl;
-	//const std::string_view svTopic( topicName );
-	//const std::string_view svMessage( (char*)message->payload, message->payloadlen );
+  assert( 0 == topicLen ); // for some reason in comes in this way
+  std::cout << "mqtt message: " << std::string( topicName ) << " " << std::string( (const char*) message->payload, message->payloadlen ) << std::endl;
+	const std::string_view svTopic( topicName );
+	const std::string_view svMessage( (char*)message->payload, message->payloadlen );
+  if ( self->m_fMessage ) self->m_fMessage( svTopic, svMessage );
   MQTTClient_freeMessage( &message );
   MQTTClient_free( topicName );
   return 1;
