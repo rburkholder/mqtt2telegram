@@ -24,18 +24,16 @@
 
 #include <vector>
 #include <stdexcept>
+#include <functional>
 #include <string_view>
 
-#include <iostream>
-#include <functional>
-
 #include <boost/json.hpp>
-
 #include <boost/asio/strand.hpp>
+#include <boost/log/trivial.hpp>
 
 #include "one_shot.hpp"
-// this needs to be factored out properly
-#include "root_certificates.hpp"
+
+#include "root_certificates.hpp" // this needs to be factored out properly
 
 #include "Bot.hpp"
 
@@ -203,12 +201,11 @@ void Bot::GetMe() {
   if ( m_pWorkGuard ) {
     auto request = std::make_shared<bot::session::one_shot>( asio::make_strand( m_io ), m_ssl_context );
     request->get(
-      c_sHost
-    , c_sPort
+      c_sHost, c_sPort
     , m_sToken
     , "getMe"
     , [this]( bool bStatus, const std::string& message ){
-        std::cout << message << std::endl;
+        BOOST_LOG_TRIVIAL(info) << message;
       }
     );
 
@@ -229,21 +226,20 @@ void Bot::PollUpdate( uint64_t offset ) {
 
     auto request = std::make_shared<bot::session::one_shot>( asio::make_strand( m_io ), m_ssl_context );
     request->get(
-      c_sHost
-    , c_sPort
+      c_sHost, c_sPort
     , m_sToken
     , "getUpdates"
     , sRequest
     , [this]( bool bStatus, const std::string& message ){
         if ( bStatus ) {
-          //std::cout << "update received: '" << message << "'" << std::endl;
+          //BOOST_LOG_TRIVIAL(info) << "update received: '" << message << "'";
           try {
 
             json::error_code jec;
             json::value jv = json::parse( message, jec );
 
             if ( jec.failed() ) {
-              std::cerr << "json convert problem: " << jec.what() << std::endl;
+              BOOST_LOG_TRIVIAL(error) << "json convert problem: " << jec.what();
             }
             else {
               Update_Result ur( json::value_to<Update_Result>( jv ) );
@@ -255,7 +251,7 @@ void Bot::PollUpdate( uint64_t offset ) {
                     // extract the chat id
                     offset = vt.id;
                     m_idChat = vt.message.chat.id;
-                    std::cout
+                    BOOST_LOG_TRIVIAL(info)
                       << "msg from="
                       << vt.message.from.id
                       << "(" << vt.message.from.svUserName << ")"
@@ -263,48 +259,45 @@ void Bot::PollUpdate( uint64_t offset ) {
                       << "(" << vt.message.chat.svUserName << ")"
                       << ",type=" << vt.message.chat.svType
                       << ",text=" << vt.message.svText
-                      << std::endl;
+                      ;
 
                     // extract any message entities
                     for ( const MessageEntity& me: vt.message.vMessageEntity ) {
                       const std::string s( vt.message.svText.substr( me.offset, me.length ) );
                       if ( "bot_command" == me.svType ) {
-                        std::cout
-                          << "  bot_command=" << s
-                          << std::endl;
+                        BOOST_LOG_TRIVIAL(info)
+                          << "bot_command=" << s
+                          ;
                         if ( m_fCommand ) {
                           m_fCommand( s );
                         }
                       }
                       else {
-                        std::cout
-                          << "  other entity="
+                        BOOST_LOG_TRIVIAL(info)
+                          << "other entity="
                           << me.svType
                           << "(" << s
                           << ")"
                           //<< ",offset=" << me.offset
                           //<< ",length=" << me.length
-                          << std::endl;
+                          ;
                       }
                     }
                   }
                 }
-
                 PollUpdate( ( 0 == offset ) ? 0 : offset + 1 );
               }
             }
-
           }
           catch( std::invalid_argument ) {
-            std::cerr << "PollUpdate invalid argument" << std::endl;
+            BOOST_LOG_TRIVIAL(error) << "PollUpdate invalid argument";
           }
           catch (...) {
-            std::cerr << "PollUpdate: unknown issue" << std::endl;
+            BOOST_LOG_TRIVIAL(error) << "PollUpdate: unknown issue";
           }
-
         }
         else {
-          std::cerr << "PollUpdate bad status" << std::endl;
+          BOOST_LOG_TRIVIAL(error) << "PollUpdate bad status";
         }
       }
     );
@@ -319,7 +312,7 @@ void Bot::SendMessage( const std::string& sMessage) {
 
   if ( m_pWorkGuard ) {
     if ( 0 == m_idChat ) {
-      std::cout << "telegram send message: no chat id set" << std::endl;
+      BOOST_LOG_TRIVIAL(warning) << "telegram send message: no chat id set";
     }
     else {
 
@@ -328,17 +321,17 @@ void Bot::SendMessage( const std::string& sMessage) {
       UpdateRequest[ "parse_mode" ] = "HTML";
       UpdateRequest[ "text" ] = sMessage;
       std::string sRequest = json::serialize( UpdateRequest );
-      std::cout << "request='" << sRequest << "'" << std::endl;
+      //BOOST_LOG_TRIVIAL(debug) << "telegram tx: '" << sRequest << "'";
+      BOOST_LOG_TRIVIAL(trace) << "telegram tx: " << sRequest;
 
       auto request = std::make_shared<bot::session::one_shot>( asio::make_strand( m_io ), m_ssl_context );
       request->post(
-        c_sHost
-      , c_sPort
+        c_sHost, c_sPort
       , m_sToken
       , "sendMessage"
       , sRequest
       , [this]( bool bStatus, const std::string& message ){
-          std::cout << "telegram response: " << message << std::endl;
+          BOOST_LOG_TRIVIAL(trace) << "telegram rx: " << message;
         }
       );
     }
@@ -367,8 +360,7 @@ void Bot::SetMyCommands() {
 
     auto request = std::make_shared<bot::session::one_shot>( asio::make_strand( m_io ), m_ssl_context );
     request->post(
-      c_sHost
-    , c_sPort
+      c_sHost, c_sPort
     , m_sToken
     , "setMyCommands"
     , sRequest
