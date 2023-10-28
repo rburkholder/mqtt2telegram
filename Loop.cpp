@@ -38,6 +38,8 @@
 #include "Config.hpp"
 #include "mqtt.hpp"
 
+// TODO: add last seen to menu, or check dashboard?
+
 Loop::Loop( const config::Values& choices, asio::io_context& io_context )
 : m_choices( choices ), m_io_context( io_context )
 , m_signals( io_context, SIGINT ) // SIGINT is called '^C'
@@ -110,8 +112,8 @@ Loop::Loop( const config::Values& choices, asio::io_context& io_context )
         boost::smatch what;
         if ( boost::regex_search( sMessage, what, expr ) ) {
           umapStatus_t::iterator iterStatus = m_umapStatus.find( sTopic );
-          //std::cout << "what0" << what[0] << '\n';
-          //std::cout << "what1" << what[1] << '\n';
+          //BOOST_LOG_TRIVIAL(trace) << "what0" << what[0];
+          //BOOST_LOG_TRIVIAL(trace) << "what1" << what[1];
           if ( m_umapStatus.end() == iterStatus ) {
             m_umapStatus.emplace( sTopic, what[ 1 ] );
             m_telegram_bot->SendMessage( sTopic + ": " + what[ 1 ]  );
@@ -197,7 +199,7 @@ void Loop::Telegram_GetMe() {
     m_telegram_bot->GetMe();
   }
   else {
-    std::cout << "telegram bot is not available" << std::endl;
+    BOOST_LOG_TRIVIAL(error) << "telegram bot is not available";
   }
 }
 
@@ -206,7 +208,7 @@ void Loop::Telegram_SendMessage() {
     m_telegram_bot->SendMessage( "mqtt2telegram test" );
   }
   else {
-    std::cout << "telegram bot is not available" << std::endl;
+    BOOST_LOG_TRIVIAL(error) << "telegram bot is not available";
   }
 }
 
