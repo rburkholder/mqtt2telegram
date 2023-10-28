@@ -178,9 +178,9 @@ int Mqtt::MessageArrived( void* context, char* topicName, int topicLen, MQTTClie
   assert( context );
   Mqtt* self = reinterpret_cast<Mqtt*>( context );
   assert( 0 == topicLen ); // for some reason in comes in this way
-  std::cout << "mqtt message: " << std::string( topicName ) << " " << std::string( (const char*) message->payload, message->payloadlen ) << std::endl;
-	const std::string_view svTopic( topicName );
-	const std::string_view svMessage( (char*)message->payload, message->payloadlen );
+  //std::cout << "mqtt message: " << std::string( topicName ) << " " << std::string( (const char*) message->payload, message->payloadlen ) << std::endl;
+  const std::string_view svTopic( topicName );
+  const std::string_view svMessage( (char*)message->payload, message->payloadlen );
   if ( self->m_fMessage ) self->m_fMessage( svTopic, svMessage );
   MQTTClient_freeMessage( &message );
   MQTTClient_free( topicName );
