@@ -38,7 +38,7 @@ const static std::string sUserAgent( "ounl.telegram/1.0" );
 
 // Report a failure
 void fail( beast::error_code ec, char const* what ) {
-  BOOST_LOG_TRIVIAL(error) << what << ": " << ec.message();
+  BOOST_LOG_TRIVIAL(error) << what << ": (" << ec.value() << ')' << ec.message();
 }
 
 } // namespace anonymous
@@ -94,7 +94,7 @@ void one_shot::run(
   //req_.prepare_payload();
 
   m_fWriteRequest = [this](){ write_empty(); };
-  m_fDone = []( bool, const std::string& ){};
+  m_fDone = []( bool, int, const std::string& ){}; // prepopulated dummy entry
 
   // Look up the domain name
   m_resolver.async_resolve(
@@ -122,7 +122,7 @@ void one_shot::get(
   {
     beast::error_code ec{ static_cast<int>( ::ERR_get_error()), asio::error::get_ssl_category() };
     BOOST_LOG_TRIVIAL(error) << ec.message();
-    m_fDone( false, ec.message() );
+    m_fDone( false, ec.value(), ec.message() );
     return;
   }
 
@@ -166,7 +166,7 @@ void one_shot::get(
   {
     beast::error_code ec{ static_cast<int>( ::ERR_get_error()), asio::error::get_ssl_category() };
     BOOST_LOG_TRIVIAL(error) << ec.message();
-    m_fDone( false, ec.message() );
+    m_fDone( false, ec.value(), ec.message() );
     return;
   }
 
@@ -213,7 +213,7 @@ void one_shot::post(
   {
     beast::error_code ec{ static_cast<int>( ::ERR_get_error()), asio::error::get_ssl_category() };
     BOOST_LOG_TRIVIAL(error) << ec.message();
-    m_fDone( false, ec.message() );
+    m_fDone( false, ec.value(), ec.message() );
     return;
   }
 
@@ -261,7 +261,7 @@ void one_shot::delete_(
   {
     beast::error_code ec{ static_cast<int>( ::ERR_get_error()), asio::error::get_ssl_category() };
     BOOST_LOG_TRIVIAL(error) << ec.message();
-    m_fDone( false, ec.message() );
+    m_fDone( false, ec.value(), ec.message() );
     return;
   }
 
@@ -292,7 +292,7 @@ void one_shot::on_resolve(
 ) {
   if ( ec ) {
     fail( ec, "os.on_resolve");
-    m_fDone( false, "os.on_resolve" );
+    m_fDone( false, ec.value(), "os.on_resolve" );
   }
   else {
     // Set a timeout on the operation
@@ -313,7 +313,7 @@ void one_shot::on_resolve(
 void one_shot::on_connect( beast::error_code ec, tcp::resolver::results_type::endpoint_type et ) {
   if ( ec ) {
     fail( ec, "os.on_connect" );
-    m_fDone( false, "os.on_connect" );
+    m_fDone( false, ec.value(), "os.on_connect" );
   }
   else {
 
@@ -334,7 +334,7 @@ void one_shot::on_handshake( beast::error_code ec ) {
 
   if ( ec ) {
     fail( ec, "os.on_handshake" );
-    m_fDone( false, "os.on_handshake" );
+    m_fDone( false, ec.value(), "os.on_handshake" );
   }
   else {
 
@@ -382,7 +382,7 @@ void one_shot::on_write(
 
   if ( ec ) {
     fail( ec, "os.on_write" );
-    m_fDone( false, "os.on_write" );
+    m_fDone( false, ec.value(), "os.on_write" );
   }
   else {
 
@@ -423,8 +423,14 @@ void one_shot::on_read( beast::error_code ec, std::size_t bytes_transferred ) {
   boost::ignore_unused( bytes_transferred );
 
   if ( ec ) {
-    fail( ec, "os.on_read" );
-    m_fDone( false, "os.on_read" );
+    switch (ec.value() ) {
+      case 1: // closed due to timeout, handled in regular call
+        break;
+      default:
+        fail( ec, "os.on_read" );
+        break;
+    }
+    m_fDone( false, ec.value(), "os.on_read" );
   }
   else {
 
@@ -434,7 +440,7 @@ void one_shot::on_read( beast::error_code ec, std::size_t bytes_transferred ) {
     //BOOST_LOG_TRIVIAL(info) << "body():" << m_parser.get().body();
 
     //m_fDone( true, m_response.body() );
-    m_fDone( true, body );
+    m_fDone( true, ec.value(), body );
     // Set a timeout on the operation
     beast::get_lowest_layer( m_stream ).expires_after( std::chrono::seconds( 15 ) );
 

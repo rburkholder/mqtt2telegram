@@ -204,7 +204,7 @@ void Bot::GetMe() {
       c_sHost, c_sPort
     , m_sToken
     , "getMe"
-    , [this]( bool bStatus, const std::string& message ){
+    , [this]( bool bStatus, int ec, const std::string& message ){
         BOOST_LOG_TRIVIAL(info) << message;
       }
     );
@@ -216,13 +216,13 @@ void Bot::PollUpdate( uint64_t offset ) {
   if ( m_pWorkGuard ) {
 
     json::object UpdateRequest;
-    UpdateRequest[ "timeout" ] = 1;
+    //UpdateRequest[ "timeout" ] = 0; // 0 is default short polling, for testing purposes only https://core.telegram.org/bots/api#sendmessage
+    UpdateRequest[ "timeout" ] = 37;
     if ( 0 < offset ) {
       UpdateRequest[ "offset" ] = offset;
     }
     std::string sRequest = json::serialize( UpdateRequest );
-    //std::string sRequest( "[\"timeout\":1]" );
-    //std::cout << "request='" << sRequest << "'" << std::endl;
+    //BOOST_LOG_TRIVIAL(trace) << "request='" << sRequest << "'";
 
     auto request = std::make_shared<bot::session::one_shot>( asio::make_strand( m_io ), m_ssl_context );
     request->get(
@@ -230,7 +230,7 @@ void Bot::PollUpdate( uint64_t offset ) {
     , m_sToken
     , "getUpdates"
     , sRequest
-    , [this]( bool bStatus, const std::string& message ){
+    , [this]( bool bStatus, int ec, const std::string& message ){
         if ( bStatus ) {
           //BOOST_LOG_TRIVIAL(info) << "update received: '" << message << "'";
           try {
@@ -297,7 +297,15 @@ void Bot::PollUpdate( uint64_t offset ) {
           }
         }
         else {
-          BOOST_LOG_TRIVIAL(error) << "PollUpdate bad status";
+          switch ( ec ) {
+            case 1: // The socket was closed due to a timeout [as expected]
+              PollUpdate( 0 ); // perform another poll
+              break;
+            default:
+              BOOST_LOG_TRIVIAL(error) << "PollUpdate bad status";
+              break;
+          }
+
         }
       }
     );
@@ -330,7 +338,7 @@ void Bot::SendMessage( const std::string& sMessage) {
       , m_sToken
       , "sendMessage"
       , sRequest
-      , [this]( bool bStatus, const std::string& message ){
+      , [this]( bool bStatus, int ec, const std::string& message ){
           BOOST_LOG_TRIVIAL(trace) << "telegram rx: " << message;
         }
       );
@@ -364,7 +372,7 @@ void Bot::SetMyCommands() {
     , m_sToken
     , "setMyCommands"
     , sRequest
-    , [this]( bool bStatus, const std::string& message ){
+    , [this]( bool bStatus, int ec, const std::string& message ){
         //std::cout << "telegram setMyCommands response: " << message << std::endl;
       }
     );
