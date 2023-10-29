@@ -57,7 +57,29 @@ private:
   std::unique_ptr<Mqtt> m_pMqtt;
   std::unique_ptr<telegram::Bot> m_telegram_bot;
 
-  using umapStatus_t = std::unordered_map<std::string,std::string>;
+  struct ups_state_t {
+    std::string sStatus_basic;
+    std::string sStatus_full;
+    std::string sRunTime;
+
+    ups_state_t( const std::string& sStatus_basic_ )
+    : sStatus_basic( sStatus_basic_ )
+    {}
+    ups_state_t( const std::string& sStatus_basic_,
+                 const std::string& sStatus_full_,
+                 const std::string& sRunTime_ )
+    : sStatus_basic( sStatus_basic_ )
+    , sStatus_full( sStatus_full_ )
+    , sRunTime( sRunTime_ )
+    {}
+    ups_state_t( ups_state_t&& state )
+    : sStatus_basic( std::move( state.sStatus_basic ) )
+    , sStatus_full( std::move( state.sStatus_full ) )
+    , sRunTime( std::move( state.sRunTime ) )
+    {}
+  };
+
+  using umapStatus_t = std::unordered_map<std::string,ups_state_t>;
   umapStatus_t m_umapStatus;
 
   using work_guard_t = asio::executor_work_guard<asio::io_context::executor_type>;

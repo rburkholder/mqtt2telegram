@@ -85,7 +85,7 @@ Loop::Loop( const config::Values& choices, asio::io_context& io_context )
           if ( sCmd == "/status" ) {
             std::string sCurrent( "current" );
             for ( const umapStatus_t::value_type& v: m_umapStatus ) {
-              sCurrent += ' ' + v.first + ":" + v.second;
+              sCurrent += ' ' + v.first + ":" + v.second.sStatus_full + ',' + v.second.sRunTime + ';';
             }
             m_telegram_bot->SendMessage( sCurrent );
           }
@@ -108,25 +108,44 @@ Loop::Loop( const config::Values& choices, asio::io_context& io_context )
         std::string sMessage( svMessage );
 
         //static const boost::regex expr {"\"ups.status\":\"([^ \"]+) .([^\"].)\""};
-        static const boost::regex expr {"\"ups.status\":\"([^ \"]+)|(([^ \"]+)( [^\"]+))\""};
+        static const boost::regex expr_status_basic {"\"ups.status\":\"([^ \"]+)|(([^ \"]+)( [^\"]+))\""};
+        static const boost::regex expr_status_full {"\"ups.status\":\"([^\"]+)\""};
+        static const boost::regex expr_runtime {"\"battery.runtime\":([0-9]+)"};
+
         boost::smatch what;
-        if ( boost::regex_search( sMessage, what, expr ) ) {
+        std::string sStatus_full;
+        std::string sRunTime;
+
+        if ( boost::regex_search( sMessage, what, expr_runtime ) ) {
+          sRunTime = std::move( what[ 1 ] );
+        }
+
+        if ( boost::regex_search( sMessage, what, expr_status_full ) ) {
+          sStatus_full = std::move( what[ 1 ] );
+        }
+
+        if ( boost::regex_search( sMessage, what, expr_status_basic ) ) {
           umapStatus_t::iterator iterStatus = m_umapStatus.find( sTopic );
           //BOOST_LOG_TRIVIAL(trace) << "what0" << what[0];
           //BOOST_LOG_TRIVIAL(trace) << "what1" << what[1];
           if ( m_umapStatus.end() == iterStatus ) {
-            m_umapStatus.emplace( sTopic, what[ 1 ] );
+            auto result = m_umapStatus.emplace( sTopic, ups_state_t( std::move( what[ 1 ] ) ) );
+            assert( result.second );
+            iterStatus = result.first;
             m_telegram_bot->SendMessage( sTopic + ": " + what[ 1 ]  );
           }
           else {
-            if ( what[ 1 ] == iterStatus->second ) {
+            if ( what[ 1 ] == iterStatus->second.sStatus_basic ) {
               // nothing to do
             }
             else {
-              iterStatus->second = what[ 1 ];
+              iterStatus->second.sStatus_basic = std::move( what[ 1 ] );
               m_telegram_bot->SendMessage( sTopic + ": " + what[ 1 ]  );
             }
           }
+
+          iterStatus->second.sStatus_full = std::move( sStatus_full );
+          iterStatus->second.sRunTime = std::move( sRunTime );
         }
       } );
   }
