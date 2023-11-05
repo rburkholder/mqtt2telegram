@@ -235,6 +235,7 @@ void Bot::PollUpdate( uint64_t offset ) {
           //BOOST_LOG_TRIVIAL(info) << "update received: '" << message << "'";
           try {
 
+            uint64_t offset {};
             json::error_code jec;
             json::value jv = json::parse( message, jec );
 
@@ -245,14 +246,13 @@ void Bot::PollUpdate( uint64_t offset ) {
               Update_Result ur( json::value_to<Update_Result>( jv ) );
 
               if ( ur.bOk ) {
-                uint64_t offset {};
                 for ( const std::vector<Update>::value_type& vt: ur.result ) {
                   if ( vt.id > offset ) {
                     // extract the chat id
                     offset = vt.id;
                     m_idChat = vt.message.chat.id;
                     BOOST_LOG_TRIVIAL(info)
-                      << "msg from="
+                      << "msg " << vt.id << " from="
                       << vt.message.from.id
                       << "(" << vt.message.from.svUserName << ")"
                       << ",chat=" << vt.message.chat.id
@@ -285,15 +285,18 @@ void Bot::PollUpdate( uint64_t offset ) {
                     }
                   }
                 }
-                PollUpdate( ( 0 == offset ) ? 0 : offset + 1 );
               }
             }
+            PollUpdate( ( 0 == offset ) ? 0 : offset + 1 ); // restart, regardless of error, may generate loop (offset is not cleared) if malformed messages?
           }
-          catch( std::invalid_argument ) {
-            BOOST_LOG_TRIVIAL(error) << "PollUpdate invalid argument";
+          catch( const std::invalid_argument& ec ) {
+            BOOST_LOG_TRIVIAL(error) << "Bot::PollUpdate std::invalid_argument " << ec.what();
           }
-          catch (...) {
-            BOOST_LOG_TRIVIAL(error) << "PollUpdate: unknown issue";
+          catch( const std::exception& ec ) {
+            BOOST_LOG_TRIVIAL(error) << "Bot::PollUpdate: std::exception " << ec.what();
+          }
+          catch(...) {
+            BOOST_LOG_TRIVIAL(error) << "Bot::PollUpdate: unknown issue";
           }
         }
         else {
@@ -302,7 +305,7 @@ void Bot::PollUpdate( uint64_t offset ) {
               PollUpdate( 0 ); // perform another poll
               break;
             default:
-              BOOST_LOG_TRIVIAL(error) << "PollUpdate bad status";
+              BOOST_LOG_TRIVIAL(error) << "Bot::PollUpdate bad status";
               break;
           }
 
