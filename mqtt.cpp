@@ -9,6 +9,7 @@
 #include <chrono>
 #include <cassert>
 #include <iostream>
+#include <string_view>
 
 #include "mqtt.hpp"
 #include "Config.hpp"
