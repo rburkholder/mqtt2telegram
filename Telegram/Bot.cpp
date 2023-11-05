@@ -268,8 +268,13 @@ void Bot::PollUpdate( uint64_t offset ) {
                         BOOST_LOG_TRIVIAL(info)
                           << "bot_command=" << s
                           ;
-                        if ( m_fCommand ) {
-                          m_fCommand( s );
+                        try {
+                          if ( m_fCommand ) {
+                            m_fCommand( s );
+                          }
+                        }
+                        catch(...) {
+                          BOOST_LOG_TRIVIAL(error) << "m_fCommand exception";
                         }
                       }
                       else {
