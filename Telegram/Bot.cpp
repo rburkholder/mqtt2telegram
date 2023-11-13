@@ -295,13 +295,13 @@ void Bot::PollUpdate( uint64_t offset ) {
             PollUpdate( ( 0 == offset ) ? 0 : offset + 1 ); // restart, regardless of error, may generate loop (offset is not cleared) if malformed messages?
           }
           catch( const std::invalid_argument& ec ) {
-            BOOST_LOG_TRIVIAL(error) << "Bot::PollUpdate std::invalid_argument " << ec.what();
+            BOOST_LOG_TRIVIAL(error) << "Bot::PollUpdate std::invalid_argument," << ec.what() << ',' << message;
           }
           catch( const std::exception& ec ) {
-            BOOST_LOG_TRIVIAL(error) << "Bot::PollUpdate: std::exception " << ec.what();
+            BOOST_LOG_TRIVIAL(error) << "Bot::PollUpdate std::exception," << ec.what() << ',' << message;
           }
           catch(...) {
-            BOOST_LOG_TRIVIAL(error) << "Bot::PollUpdate: unknown issue";
+            BOOST_LOG_TRIVIAL(error) << "Bot::PollUpdate unknown issue," << message;
           }
         }
         else {
