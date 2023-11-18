@@ -289,7 +289,13 @@ void Bot::PollUpdate( uint64_t offset ) {
                       }
                     }
                   }
+                  else {
+                    BOOST_LOG_TRIVIAL(error) << "Bot::PollUpdate vt.id <= offset," << vt.id << ',' << offset << ',' << message;
+                  }
                 }
+              }
+              else {
+                BOOST_LOG_TRIVIAL(error) << "Bot::PollUpdate ur.bOk false with: " << message;
               }
             }
             PollUpdate( ( 0 == offset ) ? 0 : offset + 1 ); // restart, regardless of error, may generate loop (offset is not cleared) if malformed messages?
