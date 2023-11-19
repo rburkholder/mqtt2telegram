@@ -152,16 +152,25 @@ Update tag_invoke( json::value_to_tag<Update>, json::value const& jv ) {
 // structure Update_Result
 
 struct Update_Result {
+
   bool bOk;
-  std::vector<Update> result;
+  std::vector<Update> vResult;
+
+  Update_Result(): bOk( false ) {};
+  Update_Result( const std::vector<Update>& vResult_ ): bOk( true ), vResult( vResult_ ) {}
 };
 
 Update_Result tag_invoke( json::value_to_tag<Update_Result>, json::value const& jv ) {
   json::object const& obj = jv.as_object();
-  return Update_Result {
-    json::value_to<bool>( obj.at( "ok" ) ),
-    json::value_to<std::vector<Update> >( obj.at( "result" ) )
-  };
+  bool bOk = json::value_to<bool>( obj.at( "ok" ) );
+  if ( bOk ) {
+    return Update_Result {
+      json::value_to<std::vector<Update> >( obj.at( "result" ) )
+    };
+  }
+  else {
+    return Update_Result();
+  }
 }
 
 // class Bot
@@ -217,7 +226,7 @@ void Bot::PollUpdate( uint64_t offset ) {
 
     json::object UpdateRequest;
     //UpdateRequest[ "timeout" ] = 0; // 0 is default short polling, for testing purposes only https://core.telegram.org/bots/api#sendmessage
-    UpdateRequest[ "timeout" ] = 37;
+    UpdateRequest[ "timeout" ] = 43; // seconds
     if ( 0 < offset ) {
       UpdateRequest[ "offset" ] = offset;
     }
@@ -225,7 +234,7 @@ void Bot::PollUpdate( uint64_t offset ) {
     //BOOST_LOG_TRIVIAL(trace) << "request='" << sRequest << "'";
 
     auto request = std::make_shared<bot::session::one_shot>( asio::make_strand( m_io ), m_ssl_context );
-    request->get(
+    request->get( // https://core.telegram.org/bots/api#getupdates
       c_sHost, c_sPort
     , m_sToken
     , "getUpdates"
@@ -243,10 +252,10 @@ void Bot::PollUpdate( uint64_t offset ) {
               BOOST_LOG_TRIVIAL(error) << "json convert problem: " << jec.what();
             }
             else {
-              Update_Result ur( json::value_to<Update_Result>( jv ) );
 
+              Update_Result ur( json::value_to<Update_Result>( jv ) );
               if ( ur.bOk ) {
-                for ( const std::vector<Update>::value_type& vt: ur.result ) {
+                for ( const std::vector<Update>::value_type& vt: ur.vResult ) {
                   if ( vt.id > offset ) {
                     // extract the chat id
                     offset = vt.id;
@@ -295,8 +304,11 @@ void Bot::PollUpdate( uint64_t offset ) {
                 }
               }
               else {
-                BOOST_LOG_TRIVIAL(error) << "Bot::PollUpdate ur.bOk false with: " << message;
+                // Bot::PollUpdate {"ok":false,"error_code":429,"description":"Too Many Requests: retry after 5","parameters":{"retry_after":5}}
+                BOOST_LOG_TRIVIAL(error) << "Bot::PollUpdate bOk false, message: " << message;
+                // TODO: track time of last message, how can we be sending too many too fast?
               }
+
             }
             PollUpdate( ( 0 == offset ) ? 0 : offset + 1 ); // restart, regardless of error, may generate loop (offset is not cleared) if malformed messages?
           }
