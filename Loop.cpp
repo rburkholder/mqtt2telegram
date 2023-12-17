@@ -218,7 +218,7 @@ void Loop::Telegram_GetMe() {
     m_telegram_bot->GetMe();
   }
   else {
-    BOOST_LOG_TRIVIAL(error) << "telegram bot is not available";
+    BOOST_LOG_TRIVIAL(error) << "telegram bot is not available (getme)";
   }
 }
 
@@ -227,7 +227,7 @@ void Loop::Telegram_SendMessage() {
     m_telegram_bot->SendMessage( "mqtt2telegram test" );
   }
   else {
-    BOOST_LOG_TRIVIAL(error) << "telegram bot is not available";
+    BOOST_LOG_TRIVIAL(error) << "telegram bot is not available (test)";
   }
 }
 
