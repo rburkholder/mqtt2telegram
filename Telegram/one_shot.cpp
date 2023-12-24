@@ -38,7 +38,7 @@ const static std::string sUserAgent( "ounl.telegram/1.0" );
 
 // Report a failure
 void fail( beast::error_code ec, char const* what ) {
-  BOOST_LOG_TRIVIAL(error) << what << ": (" << ec.value() << ')' << ec.message();
+  BOOST_LOG_TRIVIAL(error) << what << ": (" << ec.value() << ") " << ec.message();
 }
 
 } // namespace anonymous
