@@ -325,6 +325,7 @@ void Bot::PollUpdate( uint64_t offset ) {
         else {
           switch ( ec ) {
             case 1: // The socket was closed due to a timeout [as expected]
+            case 2: // Host not found (non-authoritative), try again later
               PollUpdate( 0 ); // perform another poll
               break;
             default:
