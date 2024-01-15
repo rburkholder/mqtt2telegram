@@ -20,8 +20,6 @@ set(BOOST_INCLUDEDIR "/usr/local/include/boost")
 
 #find_package(Boost 1.81.0 REQUIRED COMPONENTS program_options thread filesystem log)
 find_package(Boost 1.81.0 COMPONENTS program_options regex thread filesystem log log_setup json REQUIRED )
-#telegram:
-find_package(Td 1.8.11 REQUIRED)
 
 set(
   file_hpp
