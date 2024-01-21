@@ -1,5 +1,19 @@
 # mqtt2telegram
 
+Build:
+* need to build and install https://github.com/rburkholder/repertory with '-D OU_USE_Telegram=ON'
+
+To Build statically linked application:
+```
+git clone https://github.com/rburkholder/mqtt2telegram.git
+cd mqtt2telegram
+mkdir build
+cd build
+cmake ..
+make
+cd ..
+```
+
 Configuration File template (change usernames, passwords, and addresses):
 ```
 $ cat x64/debug/mqtt2telegram.cfg
