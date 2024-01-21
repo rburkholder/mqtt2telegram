@@ -32,11 +32,11 @@
 
 #include <nutclient.h>
 
-#include <Telegram/Bot.hpp>
+#include <ou/mqtt/mqtt.hpp>
+#include <ou/telegram/Bot.hpp>
 
 #include "Loop.hpp"
 #include "Config.hpp"
-#include "mqtt.hpp"
 
 // TODO: add last seen to menu, or check dashboard?
 
@@ -74,7 +74,7 @@ Loop::Loop( const config::Values& choices, asio::io_context& io_context )
       BOOST_LOG_TRIVIAL(warning) << "telegram: no token available" << std::endl;
     }
     else {
-      m_telegram_bot = std::make_unique<telegram::Bot>( m_choices.telegram.sToken );
+      m_telegram_bot = std::make_unique<ou::telegram::Bot>( m_choices.telegram.sToken );
 
       //auto id = m_telegram_bot->GetChatId();
       m_telegram_bot->SetChatId( choices.telegram.idChat );
@@ -98,7 +98,7 @@ Loop::Loop( const config::Values& choices, asio::io_context& io_context )
   }
 
   try {
-    m_pMqtt = std::make_unique<Mqtt>( choices, choices.mqtt.sId.c_str() );
+    m_pMqtt = std::make_unique<ou::Mqtt>( choices.mqtt );
 
     m_pMqtt->Subscribe(
       choices.mqtt.sTopic + "/#",
@@ -149,7 +149,7 @@ Loop::Loop( const config::Values& choices, asio::io_context& io_context )
         }
       } );
   }
-  catch ( const Mqtt::runtime_error& e ) {
+  catch ( const ou::Mqtt::runtime_error& e ) {
     BOOST_LOG_TRIVIAL(error) << "mqtt error: " << e.what() << '(' << e.rc << ')';
     throw e;
   }

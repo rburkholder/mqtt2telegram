@@ -25,7 +25,6 @@ set(
   file_hpp
     Config.hpp
     Loop.hpp
-    mqtt.hpp
   )
 
 set(
@@ -33,7 +32,6 @@ set(
     Config.cpp
     Loop.cpp
     main.cpp
-    mqtt.cpp
   )
 
 add_executable(
@@ -54,12 +52,11 @@ target_link_directories(
 target_link_libraries(
   ${PROJECT_NAME}
     pthread
+    libou_mqtt.a
+    libou_telegram.a
     libpaho-mqtt3c.a
-    Telegram
     ${Boost_LIBRARIES}
     crypto
     ssl
   )
-
-add_subdirectory(Telegram)
 

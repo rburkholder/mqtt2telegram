@@ -33,10 +33,13 @@ namespace config {
   class Values;
 }
 
+
+namespace ou {
 class Mqtt;
 
 namespace telegram {
   class Bot;
+}
 }
 
 namespace asio = boost::asio; // from <boost/asio/context.hpp>
@@ -55,8 +58,8 @@ private:
 
   std::string m_sMqttId;
 
-  std::unique_ptr<Mqtt> m_pMqtt;
-  std::unique_ptr<telegram::Bot> m_telegram_bot;
+  std::unique_ptr<ou::Mqtt> m_pMqtt;
+  std::unique_ptr<ou::telegram::Bot> m_telegram_bot;
 
   struct ups_state_t {
     std::string sStatus_basic;

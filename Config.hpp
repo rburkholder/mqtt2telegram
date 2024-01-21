@@ -23,15 +23,9 @@
 
 #include <string>
 
-namespace config {
+#include <ou/mqtt/config.hpp>
 
-struct Mqtt {
-  std::string sId;
-  std::string sHost; // address or name (port 1833)
-  std::string sUserName;
-  std::string sPassword;
-  std::string sTopic;
-};
+namespace config {
 
 struct Telegram {
   std::string sToken;
@@ -41,7 +35,7 @@ struct Telegram {
 struct Values {
 
   Telegram telegram;
-  Mqtt mqtt;
+  ou::mqtt::Config mqtt;
 
 };
 
