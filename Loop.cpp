@@ -78,14 +78,28 @@ Loop::Loop( const config::Values& choices, asio::io_context& io_context )
 
       //auto id = m_telegram_bot->GetChatId();
       m_telegram_bot->SetChatId( choices.telegram.idChat );
-      //Telegram_SendMessage();
 
       m_telegram_bot->SetCommand(
+        "start", "initialization", false,
         [this]( const std::string& sCmd ){
-          if ( sCmd == "/status" ) {
-            std::string sCurrent( "current" );
+          m_telegram_bot->SendMessage( "start (to be implemented)" );
+        }
+      );
+
+      m_telegram_bot->SetCommand(
+        "help", "command list", false,
+        [this]( const std::string& sCmd ){
+          m_telegram_bot->SendMessage( "commands: /help, /status" );
+        }
+      );
+
+      m_telegram_bot->SetCommand(
+        "status", "list ups states", true,
+        [this]( const std::string& sCmd ){
+          if ( sCmd == "status" ) { // need to be aware of parameters
+            std::string sCurrent( "ups state:\n" );
             for ( const umapStatus_t::value_type& v: m_umapStatus ) {
-              sCurrent += ' ' + v.first + ":" + v.second.sStatus_full + ',' + v.second.sRunTime + ';';
+              sCurrent += ' ' + v.first + ":" + v.second.sStatus_full + ',' + v.second.sRunTime + '\n';
             }
             m_telegram_bot->SendMessage( sCurrent );
           }
