@@ -19,7 +19,7 @@
  * Created: October 23, 2023 13:43:38
  */
 
-#include <set>
+#include <chrono>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -61,25 +61,35 @@ private:
   std::unique_ptr<ou::Mqtt> m_pMqtt;
   std::unique_ptr<ou::telegram::Bot> m_telegram_bot;
 
+  using time_point = std::chrono::time_point<std::chrono::system_clock>;
+
   struct ups_state_t {
+
     std::string sStatus_basic;
     std::string sStatus_full;
     std::string sRunTime;
+    time_point tpLastSeen;
 
     ups_state_t( const std::string& sStatus_basic_ )
     : sStatus_basic( sStatus_basic_ )
     {}
-    ups_state_t( const std::string& sStatus_basic_,
-                 const std::string& sStatus_full_,
-                 const std::string& sRunTime_ )
+
+    ups_state_t( const std::string& sStatus_basic_
+               , const std::string& sStatus_full_
+               , const std::string& sRunTime_
+               , time_point tpLastSeen_
+               )
     : sStatus_basic( sStatus_basic_ )
     , sStatus_full( sStatus_full_ )
     , sRunTime( sRunTime_ )
+    , tpLastSeen( tpLastSeen_ )
     {}
+
     ups_state_t( ups_state_t&& state )
     : sStatus_basic( std::move( state.sStatus_basic ) )
     , sStatus_full( std::move( state.sStatus_full ) )
     , sRunTime( std::move( state.sRunTime ) )
+    , tpLastSeen( state.tpLastSeen )
     {}
   };
 

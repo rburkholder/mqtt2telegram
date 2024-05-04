@@ -20,15 +20,16 @@
  */
 
 #include <unistd.h>
-#include <limits.h>
 
 #include <iostream>
 
-#include <boost/log/trivial.hpp>
-#include <boost/lexical_cast.hpp>
 #include <boost/regex.hpp>
 
 #include <boost/asio/post.hpp>
+
+#include <boost/log/trivial.hpp>
+
+#include <boost/lexical_cast.hpp>
 
 #include <nutclient.h>
 
@@ -97,9 +98,12 @@ Loop::Loop( const config::Values& choices, asio::io_context& io_context )
         "status", "list ups states", true,
         [this]( const std::string& sCmd ){
           if ( sCmd == "status" ) { // need to be aware of parameters
+            time_point tp = std::chrono::system_clock::now();
             std::string sCurrent( "ups state:\n" );
             for ( const umapStatus_t::value_type& v: m_umapStatus ) {
-              sCurrent += ' ' + v.first + ":" + v.second.sStatus_full + ',' + v.second.sRunTime + '\n';
+              auto duration = std::chrono::duration_cast<std::chrono::seconds>( tp - v.second.tpLastSeen );
+              const std::string sDuration( boost::lexical_cast<std::string>( duration.count() ) );
+              sCurrent += ' ' + v.first + ":" + v.second.sStatus_full + ',' + v.second.sRunTime + "s," + sDuration + "s ago" + '\n';
             }
             m_telegram_bot->SendMessage( sCurrent );
           }
@@ -158,8 +162,10 @@ Loop::Loop( const config::Values& choices, asio::io_context& io_context )
             }
           }
 
-          iterStatus->second.sStatus_full = std::move( sStatus_full );
-          iterStatus->second.sRunTime = std::move( sRunTime );
+          ups_state_t& ups_state( iterStatus->second );
+          ups_state.sStatus_full = std::move( sStatus_full );
+          ups_state.sRunTime = std::move( sRunTime );
+          ups_state.tpLastSeen = std::chrono::system_clock::now();
         }
       } );
   }
