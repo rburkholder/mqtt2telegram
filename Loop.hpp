@@ -65,8 +65,8 @@ private:
 
   struct ups_state_t {
 
-    std::string sStatus_basic;
-    std::string sStatus_full;
+    std::string sStatus_basic; // OL vs OB
+    std::string sStatus_full;  //
     std::string sRunTime;
     time_point tpLastSeen;
 
@@ -74,16 +74,16 @@ private:
     : sStatus_basic( sStatus_basic_ )
     {}
 
-    ups_state_t( const std::string& sStatus_basic_
-               , const std::string& sStatus_full_
-               , const std::string& sRunTime_
-               , time_point tpLastSeen_
-               )
-    : sStatus_basic( sStatus_basic_ )
-    , sStatus_full( sStatus_full_ )
-    , sRunTime( sRunTime_ )
-    , tpLastSeen( tpLastSeen_ )
-    {}
+    //ups_state_t( const std::string& sStatus_basic_
+    //           , const std::string& sStatus_full_
+    //           , const std::string& sRunTime_
+    //           , time_point tpLastSeen_
+    //           )
+    //: sStatus_basic( sStatus_basic_ )
+    //, sStatus_full( sStatus_full_ )
+    //, sRunTime( sRunTime_ )
+    //, tpLastSeen( tpLastSeen_ )
+    //{}
 
     ups_state_t( ups_state_t&& state )
     : sStatus_basic( std::move( state.sStatus_basic ) )

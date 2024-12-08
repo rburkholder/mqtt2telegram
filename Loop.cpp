@@ -103,6 +103,7 @@ Loop::Loop( const config::Values& choices, asio::io_context& io_context )
             for ( const umapStatus_t::value_type& v: m_umapStatus ) {
               auto duration = std::chrono::duration_cast<std::chrono::seconds>( tp - v.second.tpLastSeen );
               const std::string sDuration( boost::lexical_cast<std::string>( duration.count() ) );
+              // eg:  nut/furnace-sm1500:OL,6431s,6s ago
               sCurrent += ' ' + v.first + ":" + v.second.sStatus_full + ',' + v.second.sRunTime + "s," + sDuration + "s ago" + '\n';
             }
             m_telegram_bot->SendMessage( sCurrent );
@@ -122,41 +123,41 @@ Loop::Loop( const config::Values& choices, asio::io_context& io_context )
       choices.mqtt.sTopic + "/#",
       [this]( const std::string_view& svTopic, const std::string_view& svMessage ){
         // nut/furnace-sm1500 {"battery.charge":100,"battery.runtime":6749,"battery.voltage":26.4,"ups.status":"OL"}
+
         std::string sTopic( svTopic );
         std::string sMessage( svMessage );
-
-        //static const boost::regex expr {"\"ups.status\":\"([^ \"]+) .([^\"].)\""};
-        static const boost::regex expr_status_basic {"\"ups.status\":\"([^ \"]+)|(([^ \"]+)( [^\"]+))\""};
-        static const boost::regex expr_status_full {"\"ups.status\":\"([^\"]+)\""};
-        static const boost::regex expr_runtime {"\"battery.runtime\":([0-9]+)"};
 
         boost::smatch what;
         std::string sStatus_full;
         std::string sRunTime;
 
+        static const boost::regex expr_runtime {"\"battery.runtime\":([0-9]+)"};
         if ( boost::regex_search( sMessage, what, expr_runtime ) ) {
           sRunTime = std::move( what[ 1 ] );
         }
 
+        static const boost::regex expr_status_full {"\"ups.status\":\"([^\"]+)\""};
         if ( boost::regex_search( sMessage, what, expr_status_full ) ) {
           sStatus_full = std::move( what[ 1 ] );
         }
 
+        // decode two character code OL/OB plus additional state info (charging status)
+        static const boost::regex expr_status_basic {"\"ups.status\":\"([^ \"]+)|(([^ \"]+)( [^\"]+))\""};
         if ( boost::regex_search( sMessage, what, expr_status_basic ) ) {
           umapStatus_t::iterator iterStatus = m_umapStatus.find( sTopic );
           //BOOST_LOG_TRIVIAL(trace) << "what0" << what[0];
           //BOOST_LOG_TRIVIAL(trace) << "what1" << what[1];
-          if ( m_umapStatus.end() == iterStatus ) {
-            auto result = m_umapStatus.emplace( sTopic, ups_state_t( std::move( what[ 1 ] ) ) );
+          if ( m_umapStatus.end() == iterStatus ) { // first time so construct ups state entry
+            auto result = m_umapStatus.emplace( sTopic, ups_state_t( std::move( what[ 1 ] ) ) ); // basic state
             assert( result.second );
             iterStatus = result.first;
-            m_telegram_bot->SendMessage( sTopic + ": " + what[ 1 ]  );
+            m_telegram_bot->SendMessage( sTopic + ": " + what[ 1 ]  ); // first instance seen
           }
-          else {
+          else { // notify only on OB or OL change
             if ( what[ 1 ] == iterStatus->second.sStatus_basic ) {
-              // nothing to do
+              // nothing to do if status matches
             }
-            else {
+            else { // notification on status change, eg: nut/furnace-sm1500: OL
               iterStatus->second.sStatus_basic = std::move( what[ 1 ] );
               m_telegram_bot->SendMessage( sTopic + ": " + what[ 1 ]  );
             }
